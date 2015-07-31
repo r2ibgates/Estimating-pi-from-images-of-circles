@@ -16,53 +16,79 @@ namespace PiEstimater
                 fileName = args[1];
             else
             {
-                Console.Write("Read image: ");
+                Console.Write("Read image [..\\..\\5GScbUe.png]: ");
                 fileName = Console.ReadLine();
+                if (string.IsNullOrEmpty(fileName))
+                    fileName = "..\\..\\5GScbUe.png";
             }
             if (string.IsNullOrEmpty(fileName))
                 Environment.Exit(-1);
+            fileName = System.IO.Path.Combine(Environment.CurrentDirectory, fileName);
 
-            float radius = GetCircleRadius(fileName);
-            Console.WriteLine("Radius = {0}", radius);
+            var circle = GetCircle(fileName);
+            Console.WriteLine("Area = {0}, Center = {1}, {2}, Radius = {3}", circle.Area(), circle.Center().X, circle.Center().Y, circle.Radius());
+            Console.WriteLine("Pi = {0}", circle.Pi());
+            Console.ReadLine();
         }
 
-        static float GetCircleRadius(string imageFile)
+        static Circle GetCircle(string imageFile)
         {
             Image img = Image.FromFile(imageFile);
             Bitmap bmp = new Bitmap(img);
-            int startX = 0, endX = 0, centerY = 0;
             Color baseColor = bmp.GetPixel(0, 0);
             Color foreColor = Color.Black;
+            Circle ret = new Circle();
 
-            // First, find the y coordinate, starting at x=0. 
-            // This y should be the furthest out x, meaning (maybe)
-            // it's the middle of the image.
-            for(int x=0; x <= (int)bmp.PhysicalDimension.Width; x++)
+            for(int x=0; x < (int)bmp.PhysicalDimension.Width; x++)
             {
-                if (centerY == 0)
+                for (int y = 0; y < (int)bmp.PhysicalDimension.Height; y++)
                 {
-                    for (int y = 0; y <= (int)bmp.PhysicalDimension.Height; y++)
+                    if (bmp.GetPixel(x, y).ToArgb() == foreColor.ToArgb())
                     {
-                        if (bmp.GetPixel(x, y) != baseColor)
-                        {
-                            centerY = y;
-                            startX = x;
-                            foreColor = bmp.GetPixel(startX, centerY);
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    if (bmp.GetPixel(x, centerY) == baseColor)
-                    {
-                        endX = (x - 1);
-                        break;
+                        ret.Points.Add(new Point(x, y));
                     }
                 }
             }
 
-            return ((endX - startX) / 2f);
+            return ret;
+        }
+    }
+
+    public class Circle
+    {
+        public List<Point> Points { get; set; }
+
+        public Circle()
+        {
+            Points = new List<Point>();
+        }
+
+        public int Area()
+        {
+            return Points.Count;
+        }
+
+        public Point Center()
+        {
+            int startX = this.Points.Select(p => p.X).Min();
+            int endX = this.Points.Select(p => p.X).Max();
+            int startY = this.Points.Select(p => p.Y).Min();
+            int endY = this.Points.Select(p => p.Y).Max();
+            int x = (int)Math.Ceiling(((float)(endX - startX)) / 2f);
+            int y = (int)Math.Ceiling(((float)(endY - startY)) / 2f);
+
+            return new Point(x, y);
+        }
+       
+        public int Radius()
+        {
+            int startX = this.Points.Select(p => p.X).Min();
+            return this.Center().X - startX;
+        }
+
+        public float Pi()
+        {
+            return ((float)this.Area()) / (float)(Math.Pow((float)this.Radius(), 2));
         }
     }
 }
